@@ -741,6 +741,20 @@ body.np-page a { color: inherit; }
 @supports (-webkit-touch-callout: none) {
   .np-page .np-timeline-section { background-attachment: scroll; }
 }
+/* Touch / coarse-pointer devices: drop the blur filter and the fixed
+   background attachment. Blur compositing across many timeline cards and
+   a full-bleed fixed backdrop are the two most expensive things this page
+   does, and mobile GPUs feel both as scroll jank. Opacity + transform
+   alone still read clearly as "inactive vs. active" without the cost. */
+@media (hover: none), (pointer: coarse) {
+  .np-page .np-timeline-section { background-attachment: scroll; }
+  .np-page .np-item {
+    filter: none;
+    opacity: 0.45;
+    transition: opacity .35s var(--np-ease), transform .35s var(--np-ease);
+  }
+  .np-page .np-item.is-active { filter: none; opacity: 1; }
+}
 @media print {
   .np-page .np-spinner { display: none; }
 }
