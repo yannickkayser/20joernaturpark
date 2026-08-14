@@ -51,45 +51,69 @@
     var allItems = Array.prototype.slice.call(section.querySelectorAll('.np-item'));
     if (!allItems.length) return null;
 
-    var visible = allItems;
+    /* Skip the full-bleed photo backdrop on touch/coarse-pointer devices.
+       Swapping a large background-image with a transition on every active-
+       item change is a real repaint cost on mobile GPUs; the static colour
+       already defined in CSS reads fine without it. */
+    var skipBg = window.matchMedia
+      && window.matchMedia('(hover: none), (pointer: coarse)').matches;
 
     function imgSrc(item) {
       var img = item.querySelector('.np-item__img-wrap img');
       return img && img.getAttribute('src') ? img.getAttribute('src') : '';
     }
     function setBg(src) {
+      if (skipBg) return;
       if (!src) { section.style.backgroundImage = ''; return; }
       var current = section.style.backgroundImage;
       var next = 'url("' + src + '")';
       if (current !== next) section.style.backgroundImage = next;
     }
-    function setActive(idx) {
-      allItems.forEach(function (it) { it.classList.remove('is-active'); });
-      var it = visible[idx];
-      if (!it) return;
-      it.classList.add('is-active');
-      var src = imgSrc(it);
+
+    var activeItem = null;
+    function setActive(item) {
+      if (item === activeItem) return;
+      if (activeItem) activeItem.classList.remove('is-active');
+      activeItem = item;
+      if (!item) return;
+      item.classList.add('is-active');
+      var src = imgSrc(item);
       if (src) setBg(src);
     }
 
-    var ticking = false;
-    function update() {
-      var centre = window.scrollY + window.innerHeight / 2;
-      var best = 0, bestDist = Infinity;
-      for (var i = 0; i < visible.length; i++) {
-        var r = visible[i].getBoundingClientRect();
-        var top = r.top + window.scrollY;
-        var mid = top + r.height / 2;
-        var d = Math.abs(mid - centre);
-        if (d < bestDist) { bestDist = d; best = i; }
-      }
-      setActive(best);
-      ticking = false;
+    /* IntersectionObserver instead of a scroll-driven getBoundingClientRect
+       loop: the old approach re-measured every visible item's layout box on
+       every animation frame while scrolling, which is expensive on mobile
+       (forced layout reads stacked on top of the blur/opacity transitions
+       below). The observer only fires when intersection actually changes,
+       and the browser computes it off the hot scroll path. rootMargin
+       shrinks the effective viewport to a thin band at the centre; among
+       items crossing that band we pick the one with the highest overlap. */
+    var useObserver = typeof window.IntersectionObserver === 'function';
+    var visible = allItems;
+
+    if (useObserver) {
+      var observer = new IntersectionObserver(function (entries) {
+        var best = null, bestRatio = 0;
+        entries.forEach(function (e) {
+          if (e.isIntersecting && e.intersectionRatio >= bestRatio) {
+            bestRatio = e.intersectionRatio;
+            best = e.target;
+          }
+        });
+        if (best) setActive(best);
+      }, {
+        root: null,
+        rootMargin: '-45% 0px -45% 0px',
+        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1]
+      });
+      allItems.forEach(function (it) { observer.observe(it); });
+    } else {
+      /* Old browsers without IntersectionObserver: just activate the first
+         visible item once and leave it, rather than reintroducing the
+         expensive per-frame measuring loop. */
+      setActive(allItems[0]);
     }
-    window.addEventListener('scroll', function () {
-      if (!ticking) { window.requestAnimationFrame(update); ticking = true; }
-    }, { passive: true });
-    window.addEventListener('resize', update);
 
     /* Re-derive the visible-item list and zig-zag alternation after the
        tier toggle changes which items CSS is hiding. offsetParent is a
@@ -100,11 +124,14 @@
         it.classList.remove('np-zig-left', 'np-zig-right');
         it.classList.add(i % 2 === 0 ? 'np-zig-left' : 'np-zig-right');
       });
-      update();
+      if (activeItem && activeItem.offsetParent === null) {
+        activeItem.classList.remove('is-active');
+        activeItem = null;
+      }
+      if (!useObserver && !activeItem) setActive(visible[0]);
     }
 
     refresh();
-    setTimeout(update, 60);
 
     return { allItems: allItems, refresh: refresh, section: section };
   }
