@@ -117,10 +117,17 @@ body.np-page a { color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
+  /* 20-year-anniversary campaign photo as the initial panel image, with the
+     original gradients kept on top (now translucent) as a legibility scrim
+     over the photo rather than an opaque backdrop. */
+  background-image:
     radial-gradient(ellipse at 30% 20%, rgba(118,184,86,0.35), transparent 55%),
     radial-gradient(ellipse at 80% 80%, rgba(244,158,0,0.22), transparent 50%),
-    linear-gradient(160deg, var(--np-green-deep) 0%, #17300f 100%);
+    linear-gradient(160deg, rgba(29,55,20,0.86) 0%, rgba(23,48,15,0.9) 100%),
+    url("../content/images/20-jahre-naturpark-our.jpg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
   overflow: hidden;
   text-align: center;
 }
