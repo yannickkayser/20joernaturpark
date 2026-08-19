@@ -88,17 +88,30 @@
        below). The observer only fires when intersection actually changes,
        and the browser computes it off the hot scroll path. rootMargin
        shrinks the effective viewport to a thin band at the centre; among
-       items crossing that band we pick the one with the highest overlap. */
+       items crossing that band we pick the one with the highest overlap.
+
+       Each callback only reports entries for items whose intersection just
+       changed — NOT every currently-intersecting item. Picking the "best"
+       from only that batch meant we'd switch to whatever item had just
+       crossed a threshold even when the already-active item was still more
+       centered, which is exactly what showed up as the active tile (and
+       its background photo) jumping back and forth near a tile boundary.
+       Tracking every item's last-known ratio and re-evaluating the true
+       max across all of them on every callback fixes that. */
     var useObserver = typeof window.IntersectionObserver === 'function';
     var visible = allItems;
+    var ratios = new Map();
 
     if (useObserver) {
       var observer = new IntersectionObserver(function (entries) {
-        var best = null, bestRatio = 0;
         entries.forEach(function (e) {
-          if (e.isIntersecting && e.intersectionRatio >= bestRatio) {
-            bestRatio = e.intersectionRatio;
-            best = e.target;
+          ratios.set(e.target, e.isIntersecting ? e.intersectionRatio : 0);
+        });
+        var best = null, bestRatio = 0;
+        ratios.forEach(function (ratio, el) {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            best = el;
           }
         });
         if (best) setActive(best);
@@ -123,6 +136,12 @@
       visible.forEach(function (it, i) {
         it.classList.remove('np-zig-left', 'np-zig-right');
         it.classList.add(i % 2 === 0 ? 'np-zig-left' : 'np-zig-right');
+      });
+      /* Items just hidden by the tier toggle keep whatever ratio they had
+         the moment they disappeared — clear it so a stale high ratio from
+         before the switch can't win the "best" comparison later. */
+      allItems.forEach(function (it) {
+        if (it.offsetParent === null) ratios.set(it, 0);
       });
       if (activeItem && activeItem.offsetParent === null) {
         activeItem.classList.remove('is-active');
