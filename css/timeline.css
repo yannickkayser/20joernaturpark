@@ -313,14 +313,13 @@ body.np-page a { color: inherit; }
   line-height: 1.5;
 }
 .np-page .np-tier-hint span { display: none; }
-.np-page .np-timeline-section[data-active-tier="milestone"] .np-tier-hint-milestone { display: inline; }
-.np-page .np-timeline-section[data-active-tier="event"] .np-tier-hint-event { display: inline; }
+.np-page .np-timeline-section[data-active-tier="timeline"] .np-tier-hint-timeline { display: inline; }
 .np-page .np-timeline-section[data-active-tier="internal"] .np-tier-hint-internal { display: inline; }
 
 /* Show only items matching the currently-selected tier. Exclusive tiers:
-   every .np-item has exactly one data-tier value. */
-.np-page .np-timeline-section[data-active-tier="milestone"] .np-item:not([data-tier="milestone"]) { display: none; }
-.np-page .np-timeline-section[data-active-tier="event"] .np-item:not([data-tier="event"]) { display: none; }
+   every .np-item has exactly one data-tier value (Meilensteine + Ereignisse
+   were merged into a single "timeline" tier — 2-way toggle). */
+.np-page .np-timeline-section[data-active-tier="timeline"] .np-item:not([data-tier="timeline"]) { display: none; }
 .np-page .np-timeline-section[data-active-tier="internal"] .np-item:not([data-tier="internal"]) { display: none; }
 
 /* Small "internal" tag styling — same shape as the regular tag but a bit
