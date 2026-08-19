@@ -377,10 +377,16 @@ body.np-page a { color: inherit; }
   padding: 65px 0;
   opacity: 0.28;
   filter: blur(2px);
-  transition: opacity .6s var(--np-ease),
-              filter   .6s var(--np-ease),
-              transform .6s var(--np-ease);
-  transform: translateY(-50px);
+  /* Only paint properties (opacity/filter) here — no transform. A transform
+     on this element would shift its own geometry, which is exactly what the
+     IntersectionObserver in timeline.js measures to decide what's "active".
+     Animating a translateY here creates a feedback loop: activating moves
+     the element, which changes its intersection, which can flip the active
+     item back and forth (visible as the background/scroll jumping when the
+     scroll position lands near a tile boundary). The translateY lives on
+     .np-item__inner instead, which is invisible to the observer since it
+     doesn't change .np-item's own bounding box. */
+  transition: opacity .6s var(--np-ease), filter .6s var(--np-ease);
   display: flex;
 }
 .np-page .np-item:nth-child(even) { align-self: flex-end; }
@@ -431,10 +437,15 @@ body.np-page a { color: inherit; }
   border-left: none; border-right: 2px solid rgba(244, 158, 0, 0.5);
   text-align: right;
 }
-.np-page .np-item.is-active { opacity: 1; filter: blur(0); transform: translateY(0); }
+.np-page .np-item.is-active { opacity: 1; filter: blur(0); }
 .np-page .np-item.is-active::before { opacity: 1; top: 50%; }
 
-.np-page .np-item__inner { width: 100%; }
+.np-page .np-item__inner {
+  width: 100%;
+  transform: translateY(-50px);
+  transition: transform .6s var(--np-ease);
+}
+.np-page .np-item.is-active .np-item__inner { transform: translateY(0); }
 
 .np-page .np-item__img-wrap {
   border-radius: 6px;
@@ -740,7 +751,8 @@ body.np-page a { color: inherit; }
     transition: none !important;
     animation: none !important;
   }
-  .np-page .np-item { opacity: 1; filter: none; transform: none; }
+  .np-page .np-item { opacity: 1; filter: none; }
+  .np-page .np-item__inner { transform: none; }
   .np-page .np-item::before { opacity: 1; top: 50%; }
   .np-page .np-timeline-section { background-attachment: scroll; }
 }
@@ -757,7 +769,7 @@ body.np-page a { color: inherit; }
   .np-page .np-item {
     filter: none;
     opacity: 0.45;
-    transition: opacity .35s var(--np-ease), transform .35s var(--np-ease);
+    transition: opacity .35s var(--np-ease);
   }
   .np-page .np-item.is-active { filter: none; opacity: 1; }
 }
